@@ -1,0 +1,43 @@
+name: Build and Push to GCP
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  PROJECT_ID: your-gcp-project-id
+  REGION: us-central1
+  REPO_NAME: my-repo
+  IMAGE_NAME: my-app-image
+
+jobs:
+  build-push:
+    runs-box: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Authenticate with Google
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          token_format: 'access_token'
+          workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+          service_account: 'my-service-account@project.iam.gserviceaccount.com'
+
+      # Login to Artifact Registry
+      - name: Docker Auth
+        uses: 'docker/login-action@v3'
+        with:
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.access_token }}'
+          registry: '${{ env.REGION }}-docker.pkg.dev'
+
+      # Build and Push
+      - name: Build and Push
+        run: |-
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
