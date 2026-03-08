@@ -9,5 +9,9 @@ public class SampleController {
     public String hello() {
         return "Hello, World!";
     }
+    @GetMapping("/")
+    public String home() {
+        return "Welcome to home page";
+    }
 }
 
